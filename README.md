@@ -1,6 +1,6 @@
 # Vault
 
-Note basic concurrent Note taking API
+A basic concurrent Note taking API
 using a database connection pool for sexy concurrency
 
 
