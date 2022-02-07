@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+
+  db:
+    container_name: vaultdb
+    image: postgres
+    hostname: db
+    environment:
+      GET_HOST_FROM: dns
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 5432:5432
+    networks:
+      - vault_network
+
+  vaultapi:
+    container_name: vaultapi
+    image: gweithio/vaultapi:v1
+    hostname: vaultapi
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      GET_HOSTS_FROM: dns
+    networks:
+      - vault_network
+    volumes:
+      - .:/go/src/vaultApi
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    links:
+      - db
+    labels:
+      kompose.service.type: LoadBalancer
+
+networks:
+  vault_network:
+    driver: bridge

@@ -26,13 +26,13 @@ const (
 
 var db *pgxpool.Pool
 
-type Notes struct {
+type Note struct {
 	Author    string    `json:"author" binding:"required"`
 	Content   string    `json:"content" binding:"required"`
 	CreatedAt time.Time `json:"created_at" binding:"required"`
 }
 
-func GetAllNotes() ([]Notes, error) {
+func GetAllNotes() ([]Note, error) {
 	const query = `SELECT author, content, created_at FROM VAULT_NOTES ORDER BY created_at DESC LIMIT 100`
 
 	var (
@@ -42,11 +42,11 @@ func GetAllNotes() ([]Notes, error) {
 	)
 
 	rows, err := db.Query(context.Background(), query)
-	notes := make([]Notes, 0)
+	notes := make([]Note, 0)
 
 	for rows.Next() {
 		rows.Scan(&author, &content, &createdAt)
-		notes = append(notes, Notes{author, content, createdAt})
+		notes = append(notes, Note{author, content, createdAt})
 	}
 
 	if err != nil {
@@ -56,7 +56,7 @@ func GetAllNotes() ([]Notes, error) {
 	return notes, nil
 }
 
-func GetNoteById(id int) ([]Notes, error) {
+func GetNoteById(id int) ([]Note, error) {
 
 	const query = `SELECT author, content, created_at FROM VAULT_NOTES WHERE id = $1`
 
@@ -67,11 +67,11 @@ func GetNoteById(id int) ([]Notes, error) {
 	)
 
 	rows, err := db.Query(context.Background(), query, id)
-	notes := make([]Notes, 0)
+	notes := make([]Note, 0)
 
 	for rows.Next() {
 		rows.Scan(&author, &content, &createdAt)
-		notes = append(notes, Notes{author, content, createdAt})
+		notes = append(notes, Note{author, content, createdAt})
 	}
 
 	if err != nil {
