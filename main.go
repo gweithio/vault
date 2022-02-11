@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/joho/godotenv"
@@ -32,7 +34,7 @@ type Note struct {
 	CreatedAt time.Time `json:"created_at" binding:"required"`
 }
 
-func GetAllNotes() ([]Note, error) {
+func (n *Note) GetAllNotes() ([]Note, error) {
 	const query = `SELECT author, content, created_at FROM VAULT_NOTES ORDER BY created_at DESC LIMIT 100`
 
 	var (
@@ -56,7 +58,7 @@ func GetAllNotes() ([]Note, error) {
 	return notes, nil
 }
 
-func GetNoteById(id int) ([]Note, error) {
+func (n *Note) GetNoteById(id int) ([]Note, error) {
 
 	const query = `SELECT author, content, created_at FROM VAULT_NOTES WHERE id = $1`
 
@@ -81,7 +83,7 @@ func GetNoteById(id int) ([]Note, error) {
 	return notes, nil
 }
 
-func DeleteNoteById(id int) error {
+func (n Note) DeleteNoteById(id int) error {
 	const query = `DELETE FROM VAULT_NOTES WHERE id = $1`
 
 	_, err := db.Exec(context.Background(), query, id)
@@ -94,7 +96,7 @@ func DeleteNoteById(id int) error {
 
 }
 
-func AddNewNote(author string, content string) error {
+func (n Note) AddNewNote(author string, content string) error {
 	const query = `INSERT INTO VAULT_NOTES (author, content) VALUES ($1, $2)`
 
 	_, err := db.Exec(context.Background(), query, author, content)
@@ -132,6 +134,10 @@ func main() {
 
 	app := fiber.New()
 
+	app.Use(cors.New())
+
+	notes := Note{}
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		c.SendString(`
 		GET request to /api/note to get all the latest notes
@@ -144,13 +150,15 @@ func main() {
 	})
 
 	app.Get("/api/note", func(c *fiber.Ctx) error {
-		data, err := GetAllNotes()
+		data, err := notes.GetAllNotes()
 
 		if err != nil {
 			c.JSON(map[string]string{
 				"message": "Failed to get all notes",
 				"error":   err.Error(),
 			})
+
+			return err
 		}
 
 		c.JSON(data)
@@ -165,13 +173,15 @@ func main() {
 			log.Fatalf("Failed to convert parameter %v", err)
 		}
 
-		data, err := GetNoteById(id)
+		data, err := notes.GetNoteById(id)
 
 		if err != nil {
 			c.JSON(map[string]string{
 				"message": "Failed to get note with id of " + c.Params("id"),
 				"error":   err.Error(),
 			})
+
+			return err
 		}
 
 		c.JSON(data)
@@ -184,11 +194,13 @@ func main() {
 
 		content := c.Query("content")
 
-		if err := AddNewNote(author, content); err != nil {
+		if err := notes.AddNewNote(author, content); err != nil {
 			c.JSON(map[string]string{
 				"message": "failed to add a new note",
 				"error":   err.Error(),
 			})
+
+			return err
 		}
 
 		c.JSON(map[string]string{
@@ -203,12 +215,16 @@ func main() {
 
 		if err != nil {
 			log.Fatalf("Failed to convert parameter %v", err)
+
+			return err
 		}
 
-		if err := DeleteNoteById(id); err != nil {
+		if err := notes.DeleteNoteById(id); err != nil {
 			c.JSON(map[string]string{
 				"message": "Failed to get note with id of " + c.Query("id"),
 			})
+
+			return err
 		}
 
 		c.JSON(map[string]string{
